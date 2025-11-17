@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Ubuntu } from 'next/font/google'
 import "./globals.css";
+import { AdminLayout } from "@/components/core/layout/AdminLayout";
 
 const ubuntu = Ubuntu({
   subsets: ['latin'],
@@ -42,7 +43,9 @@ export default function RootLayout({
       <body
         className={`${ubuntu.className} antialiased`}
       >
-        {children}
+        <AdminLayout>
+          {children}
+        </AdminLayout>
       </body>
     </html>
   );

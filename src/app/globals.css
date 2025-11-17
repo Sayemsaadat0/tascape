@@ -4,19 +4,20 @@
 @theme {
   --color-background: var(--background);
   --font-sans: var(--font-ubuntu), ui-sans-serif, system-ui, sans-serif;
+  --color-t-black : #2e2e30;
+  --color-t-gray : #fdf3e9;
   /* --color-custom-button-color: var(--custom-button-color); */
 }
 
 :root {
-  --background: #9b5a19;
-  /* --custom-button-color: #f58220; */
-  /* scrollbar-gutter: stable; */
+  --background: var(--color-t-black);
 }
 
 @layer base {
   body {
     @apply bg-background;
     font-family: var(--font-ubuntu);
+    
   }
 
 }
