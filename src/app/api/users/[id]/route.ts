@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server"
 import "@/DB/db" // ensure DB connection
 import { User } from "@/models/User"
+import { authenticateRequest } from "@/lib/auth"
 
 // ======================
 // GET /api/users/{id}
 // - Get single user by ID
 // ======================
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const authResult = authenticateRequest(request)
+  if ("response" in authResult) {
+    return authResult.response
+  }
+
   try {
     const { id } = await params
 

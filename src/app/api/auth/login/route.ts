@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const secret = process.env.JWT_SECRET || process.env.JWT_SICRECT_KEY; // align with existing usage
+    const secret = process.env.JWT_SECRET;
     if (!secret) {
       return NextResponse.json(
         { success: false, message: "JWT secret not configured" },

@@ -1,45 +1,18 @@
 import { NextResponse } from "next/server";
 import "@/DB/db";
 import { User } from "@/models/User";
-
-// POST /api/auth/change-password
-// headers: Authorization: Bearer <token>
-// body: { currentPassword, newPassword }
-// Note: In production, verify JWT properly in a middleware. Here we keep it simple.
-import jwt from "jsonwebtoken";
+import { authenticateRequest } from "@/lib/auth";
 
 // Configure for static export
  
 
 export async function POST(request: Request) {
+  const authResult = authenticateRequest(request);
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
   try {
-    const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split(" ")[1];
-    const secret = process.env.JWT_SECRET || process.env.JWT_SICRECT_KEY;
-    if (!secret) {
-      return NextResponse.json(
-        { success: false, message: "JWT secret not configured" },
-        { status: 500 }
-      );
-    }
-
-    let payload: any;
-    try {
-      payload = jwt.verify(token, secret);
-    } catch {
-      return NextResponse.json(
-        { success: false, message: "Invalid or expired token" },
-        { status: 401 }
-      );
-    }
-
     const { currentPassword, newPassword } = await request.json();
     if (!currentPassword || !newPassword) {
       return NextResponse.json(
@@ -48,7 +21,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await User.findById(payload.sub).select("+password");
+    const user = await User.findById(authResult.payload.userId).select("+password");
     if (!user) {
       return NextResponse.json(
         { success: false, message: "User not found" },

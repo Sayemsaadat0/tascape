@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import "@/DB/db"; // ensure DB connection
 import { User, USER_ROLES, type UserRole } from "@/models/User";
+import { authenticateRequest } from "@/lib/auth";
 
 const normalizeRole = (value: unknown): UserRole | undefined => {
   if (typeof value !== "string") return undefined;
@@ -16,6 +17,18 @@ const normalizeRole = (value: unknown): UserRole | undefined => {
 // - Get all users (with ordering, pagination, search, and filtering)
 // ======================
 export async function GET(request: Request) {
+  const authResult = authenticateRequest(request);
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
+  if (authResult.payload.role !== "admin") {
+    return NextResponse.json(
+      { success: false, message: "Forbidden: admin access required" },
+      { status: 403 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const ordering = searchParams.get("ordering") || "-createdAt"; // Default: latest first
@@ -101,6 +114,18 @@ export async function GET(request: Request) {
 // POST API
 // ======================
 export async function POST(request: Request) {
+  const authResult = authenticateRequest(request);
+  if ("response" in authResult) {
+    return authResult.response;
+  }
+
+  if (authResult.payload.role !== "admin") {
+    return NextResponse.json(
+      { success: false, message: "Forbidden: admin access required" },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { name, email, password, role } = body;
