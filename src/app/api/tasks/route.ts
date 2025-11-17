@@ -156,13 +156,14 @@ export async function POST(request: Request) {
     if (assigned_member) {
       const resolvedAssignedMember = extractString(assigned_member)
       if (resolvedAssignedMember) {
-        assignedMemberObjectId = resolveObjectId(resolvedAssignedMember)
-        if (!assignedMemberObjectId) {
+        const resolvedId = resolveObjectId(resolvedAssignedMember)
+        if (!resolvedId) {
           return NextResponse.json(
             { success: false, message: "Invalid assigned_member" },
             { status: 400 }
           )
         }
+        assignedMemberObjectId = resolvedId
       }
     }
 
