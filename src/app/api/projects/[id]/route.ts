@@ -1,41 +1,23 @@
 import { NextResponse } from "next/server"
 import "@/DB/db"
-import { Team } from "@/models/Team"
 import { authenticateRequest } from "@/lib/auth"
+import { Project } from "@/models/Project"
+import { Team } from "@/models/Team"
 import { Types } from "mongoose"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 export const fetchCache = "force-no-store"
 
-const resolveObjectId = (value: string) => {
-  if (!value || !Types.ObjectId.isValid(value)) return null
-  return new Types.ObjectId(value)
-}
-
-const extractUserIdParam = (value: unknown) => {
+const extractString = (value: unknown) => {
   if (typeof value !== "string") return ""
   return value.trim()
 }
 
-const isValidMembersArray = (members: unknown) => {
-  if (!Array.isArray(members)) return false
-  return members.every(
-    (member) =>
-      member &&
-      typeof member === "object" &&
-      typeof (member as any).name === "string" &&
-      typeof (member as any).role === "string" &&
-      typeof (member as any).capacity === "number"
-  )
+const resolveObjectId = (value: string) => {
+  if (!value || !Types.ObjectId.isValid(value)) return null
+  return new Types.ObjectId(value)
 }
-
-const sanitizeMembers = (members: any[]) =>
-  members.map((member) => ({
-    name: member.name.trim(),
-    role: member.role.trim(),
-    capacity: member.capacity,
-  }))
 
 export async function GET(
   request: Request,
@@ -53,7 +35,7 @@ export async function GET(
     ])
 
     const { searchParams } = new URL(request.url)
-    const queryUserId = extractUserIdParam(searchParams.get("user_id"))
+    const queryUserId = extractString(searchParams.get("user_id"))
 
     if (!queryUserId) {
       return NextResponse.json(
@@ -69,34 +51,48 @@ export async function GET(
       )
     }
 
-    const teamObjectId = resolveObjectId(id)
-
-    if (!teamObjectId) {
+    const projectObjectId = resolveObjectId(id)
+    if (!projectObjectId) {
       return NextResponse.json(
         { success: false, message: "Invalid identifier" },
         { status: 400 }
       )
     }
 
-    const team = await Team.findOne({
-      _id: teamObjectId,
+    const project = await Project.findOne({
+      _id: projectObjectId,
       user_id: queryUserId,
-    })
-    if (!team) {
+    }).populate("team_id")
+
+    if (!project) {
       return NextResponse.json(
-        { success: false, message: "Team not found" },
+        { success: false, message: "Project not found" },
         { status: 404 }
       )
     }
 
+    const projectObj = project.toObject()
+    const populatedTeam =
+      projectObj.team_id && typeof projectObj.team_id === "object"
+        ? projectObj.team_id
+        : null
+
+    const formattedProject = {
+      ...projectObj,
+      team_id: populatedTeam
+        ? populatedTeam._id.toString()
+        : projectObj.team_id?.toString?.() ?? projectObj.team_id,
+      team_info: populatedTeam,
+    }
+
     return NextResponse.json(
-      { success: true, message: "Team retrieved", result: team },
+      { success: true, message: "Project retrieved", result: formattedProject },
       { status: 200 }
     )
   } catch (error) {
-    console.error("Error fetching team", error)
+    console.error("Error fetching project", error)
     return NextResponse.json(
-      { success: false, message: "Failed to fetch team" },
+      { success: false, message: "Failed to fetch project" },
       { status: 500 }
     )
   }
@@ -113,9 +109,9 @@ export async function PATCH(
 
   try {
     const [{ id }, body] = await Promise.all([params, request.json()])
-    const { user_id, title, members } = body ?? {}
+    const { user_id, name, team_id } = body ?? {}
 
-    const resolvedUserId = extractUserIdParam(user_id)
+    const resolvedUserId = extractString(user_id)
     if (!resolvedUserId) {
       return NextResponse.json(
         { success: false, message: "user_id is required" },
@@ -130,8 +126,8 @@ export async function PATCH(
       )
     }
 
-    const teamObjectId = resolveObjectId(id)
-    if (!teamObjectId) {
+    const projectObjectId = resolveObjectId(id)
+    if (!projectObjectId) {
       return NextResponse.json(
         { success: false, message: "Invalid identifier" },
         { status: 400 }
@@ -140,28 +136,46 @@ export async function PATCH(
 
     const updatePayload: Record<string, unknown> = {}
 
-    if (typeof title !== "undefined") {
-      if (!title || typeof title !== "string" || !title.trim()) {
+    if (typeof name !== "undefined") {
+      if (!name || typeof name !== "string" || !name.trim()) {
         return NextResponse.json(
-          { success: false, message: "Title must be a non-empty string" },
+          { success: false, message: "Name must be a non-empty string" },
           { status: 400 }
         )
       }
-      updatePayload.title = title.trim()
+      updatePayload.name = name.trim()
     }
 
-    if (typeof members !== "undefined") {
-      if (!isValidMembersArray(members)) {
+    if (typeof team_id !== "undefined") {
+      const resolvedTeamId = extractString(team_id)
+      if (!resolvedTeamId) {
         return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Members must be an array of { name: string, role: string, capacity: number }",
-          },
+          { success: false, message: "team_id must be provided when supplied" },
           { status: 400 }
         )
       }
-      updatePayload.members = sanitizeMembers(members)
+
+      const teamObjectId = resolveObjectId(resolvedTeamId)
+      if (!teamObjectId) {
+        return NextResponse.json(
+          { success: false, message: "Invalid team identifier" },
+          { status: 400 }
+        )
+      }
+
+      const team = await Team.findOne({
+        _id: teamObjectId,
+        user_id: resolvedUserId,
+      })
+
+      if (!team) {
+        return NextResponse.json(
+          { success: false, message: "Team not found or unauthorized" },
+          { status: 404 }
+        )
+      }
+
+      updatePayload.team_id = teamObjectId
     }
 
     if (Object.keys(updatePayload).length === 0) {
@@ -171,27 +185,27 @@ export async function PATCH(
       )
     }
 
-    const updatedTeam = await Team.findOneAndUpdate(
-      { _id: teamObjectId, user_id: resolvedUserId },
+    const updatedProject = await Project.findOneAndUpdate(
+      { _id: projectObjectId, user_id: resolvedUserId },
       { $set: updatePayload },
       { new: true }
     )
 
-    if (!updatedTeam) {
+    if (!updatedProject) {
       return NextResponse.json(
-        { success: false, message: "Team not found" },
+        { success: false, message: "Project not found" },
         { status: 404 }
       )
     }
 
     return NextResponse.json(
-      { success: true, message: "Team updated", result: updatedTeam },
+      { success: true, message: "Project updated", result: updatedProject },
       { status: 200 }
     )
   } catch (error) {
-    console.error("Error updating team", error)
+    console.error("Error updating project", error)
     return NextResponse.json(
-      { success: false, message: "Failed to update team" },
+      { success: false, message: "Failed to update project" },
       { status: 500 }
     )
   }
@@ -209,7 +223,7 @@ export async function DELETE(
   try {
     const [{ id }] = await Promise.all([params])
     const { searchParams } = new URL(request.url)
-    const queryUserId = extractUserIdParam(searchParams.get("user_id"))
+    const queryUserId = extractString(searchParams.get("user_id"))
 
     if (!queryUserId) {
       return NextResponse.json(
@@ -225,36 +239,37 @@ export async function DELETE(
       )
     }
 
-    const teamObjectId = resolveObjectId(id)
-    if (!teamObjectId) {
+    const projectObjectId = resolveObjectId(id)
+    if (!projectObjectId) {
       return NextResponse.json(
         { success: false, message: "Invalid identifier" },
         { status: 400 }
       )
     }
 
-    const deletedTeam = await Team.findOneAndDelete({
-      _id: teamObjectId,
+    const deletedProject = await Project.findOneAndDelete({
+      _id: projectObjectId,
       user_id: queryUserId,
     })
 
-    if (!deletedTeam) {
+    if (!deletedProject) {
       return NextResponse.json(
-        { success: false, message: "Team not found" },
+        { success: false, message: "Project not found" },
         { status: 404 }
       )
     }
 
     return NextResponse.json(
-      { success: true, message: "Team deleted" },
+      { success: true, message: "Project deleted" },
       { status: 200 }
     )
   } catch (error) {
-    console.error("Error deleting team", error)
+    console.error("Error deleting project", error)
     return NextResponse.json(
-      { success: false, message: "Failed to delete team" },
+      { success: false, message: "Failed to delete project" },
       { status: 500 }
     )
   }
 }
+
 
