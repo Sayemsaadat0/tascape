@@ -89,7 +89,7 @@ const SignInForm = () => {
 const Page = () => {
     return (
         <div className="flex items-center justify-center min-h-screen bg-t-gray px-4">
-            <div className="w-full max-w-sm rounded-[32px] bg-t-black p-8 text-white shadow-2xl border border-white/10">
+            <div className="w-full max-w-sm rounded-[32px] bg-t-black p-8 text-white shadow-[1px_-1px_0px_5px_rgba(0,0,0,0.1)] border-4 border-white">
                 <div className="flex flex-col space-y-6">
                     <Link href="/" className="cursor-pointer w-fit mx-auto flex items-center gap-3">
                         <div>
