@@ -41,7 +41,7 @@ const DeleteAction: React.FC<DeleteActionProps> = ({
     <AlertDialog open={open} onOpenChange={setOpen}>
       <div
         onClick={() => setOpen(true)}
-        className="cursor-pointer text-red-500 hover:text-red-600 transition-colors"
+        className="cursor-pointer text-red-400 hover:opacity-80 transition-opacity"
       >
         {isOnlyIcon ? (
           <Trash2 className="w-4 h-4" />

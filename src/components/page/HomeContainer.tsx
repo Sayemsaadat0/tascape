@@ -41,7 +41,7 @@ const HomeContainer = () => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-5">
         {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={index}
@@ -64,14 +64,14 @@ const HomeContainer = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 p-5">
         <p className="text-white/60">Failed to load stats</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-5">
       {statCards.map((stat, index) => {
         const Icon = stat.icon;
         return (

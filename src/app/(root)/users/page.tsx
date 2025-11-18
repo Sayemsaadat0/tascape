@@ -44,14 +44,14 @@ const UsersPage = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 p-5">
         <p className="text-white/60">Failed to load users</p>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="p-5">
       <h1 className="text-2xl font-semibold text-t-black mb-4">
         User Management
         {users?.pagination?.total_count
