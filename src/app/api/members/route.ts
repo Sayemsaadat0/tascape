@@ -7,10 +7,10 @@ export const dynamic = "force-dynamic"
 export const revalidate = 0
 export const fetchCache = "force-no-store"
 
-const extractString = (value: unknown) => {
-  if (typeof value !== "string") return ""
-  return value.trim()
-}
+// const extractString = (value: unknown) => {
+//   if (typeof value !== "string") return ""
+//   return value.trim()
+// }
 
 // ======================
 // GET /api/members

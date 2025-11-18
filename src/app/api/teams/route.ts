@@ -19,11 +19,11 @@ const isValidMemberIdsArray = (members: unknown) => {
   )
 }
 
-const extractUserIdParam = (value: unknown) => {
-  if (typeof value !== "string") return ""
-  const trimmed = value.trim()
-  return trimmed
-}
+// const extractUserIdParam = (value: unknown) => {
+//   if (typeof value !== "string") return ""
+//   const trimmed = value.trim()
+//   return trimmed
+// }
 
 export async function GET(request: Request) {
   const authResult = authenticateRequest(request)
