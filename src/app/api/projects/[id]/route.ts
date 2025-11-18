@@ -226,21 +226,15 @@ export async function DELETE(
   }
 
   try {
-    const [{ id }] = await Promise.all([params])
-    const { searchParams } = new URL(request.url)
-    const queryUserId = extractString(searchParams.get("user_id"))
+    const { id } = await params
 
-    if (!queryUserId) {
-      return NextResponse.json(
-        { success: false, message: "user_id query parameter is required" },
-        { status: 400 }
-      )
-    }
+    // Get user_id from decoded token (sub field)
+    const userId = authResult.payload.userId
 
-    if (authResult.payload.userId !== queryUserId) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "Forbidden: user mismatch" },
-        { status: 403 }
+        { success: false, message: "User ID not found in token" },
+        { status: 401 }
       )
     }
 
@@ -254,7 +248,7 @@ export async function DELETE(
 
     const deletedProject = await Project.findOneAndDelete({
       _id: projectObjectId,
-      user_id: queryUserId,
+      user_id: userId,
     })
 
     if (!deletedProject) {

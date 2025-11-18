@@ -41,8 +41,23 @@ const HomeContainer = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <p className="text-white/60">Loading stats...</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div
+            key={index}
+            className="rounded-[32px] bg-t-black p-6 shadow-[1px_-1px_0px_5px_rgba(0,0,0,0.1)] border-2 border-white"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="h-4 w-20 bg-white/20 rounded mb-3 animate-pulse"></div>
+                <div className="h-8 w-16 bg-white/20 rounded animate-pulse"></div>
+              </div>
+              <div className="bg-white/10 p-4 rounded-full">
+                <div className="w-6 h-6 bg-white/20 rounded animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

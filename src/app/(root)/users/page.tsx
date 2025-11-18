@@ -13,28 +13,28 @@ const UsersPage = () => {
     {
       title: "Name",
       dataKey: "name",
-      row: (data: UserType, rowIndex: number) => (
+      row: (data: UserType) => (
         <p className="text-black">{data?.name}</p>
       ),
     },
     {
       title: "Email",
       dataKey: "email",
-      row: (data: UserType, rowIndex: number) => (
+      row: (data: UserType) => (
         <p className="text-black">{data?.email}</p>
       ),
     },
     {
       title: "Role",
       dataKey: "role",
-      row: (data: UserType, rowIndex: number) => (
+      row: (data: UserType) => (
         <p className="text-black">{data?.role}</p>
       ),
     },
     {
       title: "Created At",
       dataKey: "createdAt",
-      row: (data: UserType, rowIndex: number) => (
+      row: (data: UserType) => (
         <p className="text-black">
           {data?.createdAt ? formatDatestamp(data.createdAt) : "-"}
         </p>
