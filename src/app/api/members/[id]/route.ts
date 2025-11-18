@@ -101,20 +101,15 @@ export async function PATCH(
 
   try {
     const [{ id }, body] = await Promise.all([params, request.json()])
-    const { user_id, name, role, capacity, used_capacity } = body ?? {}
+    const { name, role, capacity, used_capacity } = body ?? {}
 
-    const resolvedUserId = extractString(user_id)
-    if (!resolvedUserId) {
-      return NextResponse.json(
-        { success: false, message: "user_id is required" },
-        { status: 400 }
-      )
-    }
+    // Get user_id from decoded token (sub field)
+    const userId = authResult.payload.userId
 
-    if (authResult.payload.userId !== resolvedUserId) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "Forbidden: user mismatch" },
-        { status: 403 }
+        { success: false, message: "User ID not found in token" },
+        { status: 401 }
       )
     }
 
@@ -129,7 +124,7 @@ export async function PATCH(
     // Check if member exists and belongs to user
     const existingMember = await Member.findOne({
       _id: memberObjectId,
-      user_id: resolvedUserId,
+      user_id: userId,
     })
 
     if (!existingMember) {
@@ -200,7 +195,7 @@ export async function PATCH(
     }
 
     const updatedMember = await Member.findOneAndUpdate(
-      { _id: memberObjectId, user_id: resolvedUserId },
+      { _id: memberObjectId, user_id: userId },
       { $set: updatePayload },
       { new: true }
     )
@@ -226,7 +221,7 @@ export async function PATCH(
 }
 
 // ======================
-// DELETE /api/members/[id]?user_id={user_id}
+// DELETE /api/members/[id]
 // - Delete a member
 // ======================
 export async function DELETE(
@@ -239,24 +234,15 @@ export async function DELETE(
   }
 
   try {
-    const [{ id }, searchParams] = await Promise.all([
-      params,
-      Promise.resolve(new URL(request.url).searchParams),
-    ])
+    const { id } = await params
 
-    const queryUserId = extractString(searchParams.get("user_id"))
+    // Get user_id from decoded token (sub field)
+    const userId = authResult.payload.userId
 
-    if (!queryUserId) {
+    if (!userId) {
       return NextResponse.json(
-        { success: false, message: "user_id query parameter is required" },
-        { status: 400 }
-      )
-    }
-
-    if (authResult.payload.userId !== queryUserId) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden: user mismatch" },
-        { status: 403 }
+        { success: false, message: "User ID not found in token" },
+        { status: 401 }
       )
     }
 
@@ -270,7 +256,7 @@ export async function DELETE(
 
     const deletedMember = await Member.findOneAndDelete({
       _id: memberObjectId,
-      user_id: queryUserId,
+      user_id: userId,
     })
 
     if (!deletedMember) {

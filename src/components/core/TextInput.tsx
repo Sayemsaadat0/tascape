@@ -31,7 +31,10 @@ const TextInput: React.FC<TextInputProps> = ({
           autoComplete="off"
           type={type}
           id={id}
-          className={cn(inputVariants({ className }))}
+          className={cn(
+            inputVariants({ className }),
+            type === 'number' && '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]'
+          )}
           placeholder={placeholder || ''}
           {...props}
         />

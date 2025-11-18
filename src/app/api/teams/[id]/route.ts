@@ -14,11 +14,6 @@ const resolveObjectId = (value: string) => {
   return new Types.ObjectId(value)
 }
 
-const extractUserIdParam = (value: unknown) => {
-  if (typeof value !== "string") return ""
-  return value.trim()
-}
-
 const isValidMemberIdsArray = (members: unknown) => {
   if (!Array.isArray(members)) return false
   return members.every(
@@ -39,27 +34,8 @@ export async function GET(
   }
 
   try {
-    const [userId, { id }] = await Promise.all([
-      Promise.resolve(authResult.payload.userId),
-      params,
-    ])
-
-    const { searchParams } = new URL(request.url)
-    const queryUserId = extractUserIdParam(searchParams.get("user_id"))
-
-    if (!queryUserId) {
-      return NextResponse.json(
-        { success: false, message: "user_id query parameter is required" },
-        { status: 400 }
-      )
-    }
-
-    if (userId !== queryUserId) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden: user mismatch" },
-        { status: 403 }
-      )
-    }
+    const userId = authResult.payload.userId
+    const { id } = await params
 
     const teamObjectId = resolveObjectId(id)
 
@@ -72,7 +48,7 @@ export async function GET(
 
     const team = await Team.findOne({
       _id: teamObjectId,
-      user_id: queryUserId,
+      user_id: userId,
     }).populate("members")
 
     if (!team) {
@@ -107,23 +83,9 @@ export async function PATCH(
   }
 
   try {
+    const userId = authResult.payload.userId
     const [{ id }, body] = await Promise.all([params, request.json()])
-    const { user_id, title, members } = body ?? {}
-
-    const resolvedUserId = extractUserIdParam(user_id)
-    if (!resolvedUserId) {
-      return NextResponse.json(
-        { success: false, message: "user_id is required" },
-        { status: 400 }
-      )
-    }
-
-    if (authResult.payload.userId !== resolvedUserId) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden: user mismatch" },
-        { status: 403 }
-      )
-    }
+    const { title, members } = body ?? {}
 
     const teamObjectId = resolveObjectId(id)
     if (!teamObjectId) {
@@ -171,7 +133,7 @@ export async function PATCH(
       // Validate all members exist and belong to the user
       const existingMembers = await Member.find({
         _id: { $in: memberObjectIds },
-        user_id: resolvedUserId,
+        user_id: userId,
       })
 
       if (existingMembers.length !== memberObjectIds.length) {
@@ -195,7 +157,7 @@ export async function PATCH(
     }
 
     const updatedTeam = await Team.findOneAndUpdate(
-      { _id: teamObjectId, user_id: resolvedUserId },
+      { _id: teamObjectId, user_id: userId },
       { $set: updatePayload },
       { new: true }
     ).populate("members")
@@ -232,23 +194,8 @@ export async function DELETE(
   }
 
   try {
-    const [{ id }] = await Promise.all([params])
-    const { searchParams } = new URL(request.url)
-    const queryUserId = extractUserIdParam(searchParams.get("user_id"))
-
-    if (!queryUserId) {
-      return NextResponse.json(
-        { success: false, message: "user_id query parameter is required" },
-        { status: 400 }
-      )
-    }
-
-    if (authResult.payload.userId !== queryUserId) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden: user mismatch" },
-        { status: 403 }
-      )
-    }
+    const userId = authResult.payload.userId
+    const { id } = await params
 
     const teamObjectId = resolveObjectId(id)
     if (!teamObjectId) {
@@ -260,7 +207,7 @@ export async function DELETE(
 
     const deletedTeam = await Team.findOneAndDelete({
       _id: teamObjectId,
-      user_id: queryUserId,
+      user_id: userId,
     })
 
     if (!deletedTeam) {

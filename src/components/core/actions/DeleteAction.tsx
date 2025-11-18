@@ -1,16 +1,14 @@
-'use client';
+"use client";
 
 import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { DeleteIcon } from 'lucide-react';
-import { useCallback, useState } from 'react';
-// import Deleteicon from '../icons/dashboard/DeleteIcon';
-// import Button from '@/components/ui/button';
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { useCallback, useState } from "react";
 
 type DeleteActionProps = {
   handleDeleteSubmit: Function;
@@ -31,53 +29,64 @@ const DeleteAction: React.FC<DeleteActionProps> = ({
       setOpen(false);
     } catch (err: any) {
       console.error(err);
-      for (const key of err.errors) {
-        console.error(key);
+      if (err.errors && Array.isArray(err.errors)) {
+        for (const key of err.errors) {
+          console.error(key);
+        }
       }
     }
   }, [handleDeleteSubmit]);
 
   return (
-    <div className="">
-      <AlertDialog open={open} onOpenChange={() => setOpen(!open)}>
-        <div onClick={() => setOpen(!open)} className="cursor-pointer text-red-500 ">
-          {isOnlyIcon ? (
-            <div className="border p-2 hover:bg-red-100 rounded-full border-red-500 mt-1">
-              <DeleteIcon />
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <div
+        onClick={() => setOpen(true)}
+        className="cursor-pointer text-red-500 hover:text-red-600 transition-colors"
+      >
+        {isOnlyIcon ? (
+          <Trash2 className="w-4 h-4" />
+        ) : (
+          <div className="flex items-center gap-2">
+            <Trash2 className="w-4 h-4" />
+            <span>Delete</span>
+          </div>
+        )}
+      </div>
+      <AlertDialogContent className="bg-t-black text-white max-w-xs p-6">
+        <AlertDialogTitle className="sr-only">
+          Delete Confirmation
+        </AlertDialogTitle>
+        <AlertDialogDescription></AlertDialogDescription>
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="bg-red-500/10 p-3 rounded-full">
+              <Trash2 className="w-8 h-8 text-red-500" />
             </div>
-          ) : (
-            <div className="flex items-center gap-2  ">
-              <DeleteIcon /> Delete
-            </div>
-          )}
-        </div>
-        <AlertDialogContent className="py-10 dark:bg-oc-black-700">
-          <AlertDialogTitle></AlertDialogTitle>
-          <AlertDialogDescription></AlertDialogDescription>
+          </div>
           <div>
-            <div className="text-oc-primary-2-500  flex justify-center pb-3">
-              <DeleteIcon size={'80'} />
-              <p></p>
-            </div>
-            <h3 className="text-w-title-3-Medium-36 text-center">Are You sure?</h3>
-            <p className="text-center py-2 text-w-paragraph-regular-20">
-              This action cant be undone, <br />
-              all the information will be lost forever
+            <h3 className="text-xl font-semibold mb-2">Are you sure?</h3>
+            <p className="text-sm text-white/60">
+              This action cannot be undone.
             </p>
           </div>
-          <div className="flex justify-center gap-8">
+          <div className="flex gap-3 pt-2">
             <Button
-              variant="destructive"
+              onClick={() => setOpen(false)}
+              className="flex-1 rounded-full  cursor-pointer bg-white/10 hover:bg-white/20 text-white border border-white/20"
+            >
+              Cancel
+            </Button>
+            <Button
               disabled={isLoading}
               onClick={handleDelete}
+              className="flex-1 cursor-pointer rounded-full bg-red-500 hover:bg-red-600 text-white font-semibold"
             >
-              {isLoading ? 'Deleting' : 'Confirm'}
+              {isLoading ? "Deleting..." : "Delete"}
             </Button>
-            <Button onClick={() => setOpen(false)} variant="outline">Cancel</Button>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+        </div>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 
