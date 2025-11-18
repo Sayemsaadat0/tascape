@@ -13,7 +13,7 @@ interface AdminLayoutProps {
 }
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(true)
 
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed)
@@ -35,15 +35,12 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           {/* Main Content Area */}
           <div className="flex flex-1 flex-col overflow-hidden">
             {/* Navbar */}
-            <Navbar
-              isCollapsed={isCollapsed}
-              onToggleCollapse={handleToggleCollapse}
-            />
+            <Navbar isCollapsed={false} />
 
             {/* Page Content */}
             <main className={cn(
               "flex-1 overflow-auto min-h-screen border border-gray-400 bg-t-gray! rounded-lg transition-all duration-300",
-              
+
             )}>
               <div className="mx-auto p-5   ">
                 {children}

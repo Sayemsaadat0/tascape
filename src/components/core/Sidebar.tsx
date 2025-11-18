@@ -4,7 +4,7 @@ import React, { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { sidebarRoutes,  type SidebarRoute } from "@/dummy/constant.data"
+import { sidebarRoutes, type SidebarRoute } from "@/dummy/constant.data"
 import {
     Sheet,
     SheetContent,
@@ -12,8 +12,9 @@ import {
     SheetTitle
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Menu } from "lucide-react"
-import { LogoIcon } from "./icons/icons"
+import { Menu, MenuIcon } from "lucide-react"
+// import { LogoIcon } from "./icons/icons"
+// import Image from "next/image"
 
 interface SidebarProps {
     isCollapsed: boolean
@@ -22,6 +23,8 @@ interface SidebarProps {
 }
 
 interface SidebarItemProps {
+    open: boolean
+    setOpen: Function
     route: SidebarRoute
     isCollapsed: boolean
     isMobile?: boolean
@@ -29,6 +32,8 @@ interface SidebarItemProps {
 }
 
 const SidebarItem: React.FC<SidebarItemProps> = ({
+    open,
+    setOpen,
     route,
     isCollapsed,
     isMobile = false,
@@ -79,6 +84,8 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
                     <div className="mt-1 space-y-1">
                         {route.children?.map((child) => (
                             <SidebarItem
+                                open={open}
+                                setOpen={setOpen}
                                 key={child.id}
                                 route={child}
                                 isCollapsed={isCollapsed}
@@ -95,7 +102,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
     }
 
     const linkContent = (
-        <Link href={route?.path || ""} className="block">
+        <Link href={route?.path || ""} className="block" onClick={() => setOpen(false)}>
             {itemContent}
         </Link>
     )
@@ -103,32 +110,34 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
     return linkContent
 }
 
-export const SidebarContent: React.FC<{ isCollapsed: boolean; isMobile?: boolean }> = ({
+export const SidebarContent: React.FC<{ open: boolean; setOpen: Function; isCollapsed: boolean; isMobile?: boolean; onToggleCollapse: () => void }> = ({
+    open,
+    setOpen,
     isCollapsed,
-    isMobile = false
+    isMobile = false,
+    onToggleCollapse
 }) => {
     return (
         <div className="flex h-full flex-col  backdrop-blur-lg ">
             {/* Header */}
-            <div className={`flex py-3.5 items-center  ${!isCollapsed ? "" : "justify-center"} px-4`}>
-                {(!isCollapsed || isMobile) ? (
-                    <Link href="/" className=" flex items-center gap-3">
-                        <div>
-                            <LogoIcon />
-                        </div>
-                        <p className="text-white text-xl -mx-3 ">tascape</p>
-                    </Link>
-                ) : (
-                    <div>
-                        <LogoIcon />
+            {
+                !isMobile && <div className={`flex py-3.5 gap-3 items-center  ${!isCollapsed ? "" : "justify-center"} px-4`}>
+                    <div onClick={onToggleCollapse} className="p-0 mt-1 hidden md:flex cursor-pointer">
+                        <MenuIcon className="w-full text-t-gray " />
                     </div>
-                )}
-            </div>
+                    {
+                        !isCollapsed && <p className="text-white/80 ">Welcome</p>
+                    }
+                </div>
+            }
+
 
             {/* Navigation */}
             <nav className="flex-1 space-y-3 p-4 ">
                 {sidebarRoutes.map((route) => (
                     <SidebarItem
+                        open={open}
+                        setOpen={setOpen}
                         key={route.id}
                         route={route}
                         isCollapsed={isCollapsed}
@@ -136,31 +145,14 @@ export const SidebarContent: React.FC<{ isCollapsed: boolean; isMobile?: boolean
                     />
                 ))}
             </nav>
-
-            {/* Footer */}
-            {/* <div className="border-t border-gray-200 p-4 bg-gray-50">
-        <div className={cn(
-          "flex items-center gap-3",
-          isCollapsed && !isMobile && "justify-center"
-        )}>
-          <div className="h-8 w-8 rounded-full bg-amber-600 flex items-center justify-center">
-            <span className="text-white font-bold text-xs">A</span>
-          </div>
-          {(!isCollapsed || isMobile) && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">Admin User</p>
-              <p className="text-xs text-gray-600 truncate">admin@lawfirm.com</p>
-            </div>
-          )}
-        </div>
-      </div> */}
         </div>
     )
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
     isCollapsed,
-    isMobile = false
+    isMobile = false,
+    onToggleCollapse
 }) => {
     if (isMobile) {
         return (
@@ -176,7 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </SheetTrigger>
                 <SheetContent side="left" className="w-64 p-0">
                     <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                    <SidebarContent isCollapsed={false} isMobile={true} />
+                    <SidebarContent open={false} setOpen={() => { }} isCollapsed={false} isMobile={true} onToggleCollapse={onToggleCollapse} />
                 </SheetContent>
             </Sheet>
         )
@@ -185,11 +177,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return (
         <div
             className={cn(
-                "hidden md:flex h-full bg-t-black flex-col transition-all duration-300",
+                "hidden md:flex h-full  bg-t-black flex-col transition-all duration-300",
                 isCollapsed ? "w-24" : "w-48"
             )}
         >
-            <SidebarContent isCollapsed={isCollapsed} isMobile={false} />
+
+            <SidebarContent open={false} setOpen={() => undefined} isCollapsed={isCollapsed} isMobile={false} onToggleCollapse={onToggleCollapse} />
         </div>
     )
 }

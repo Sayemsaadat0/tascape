@@ -1,8 +1,7 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 // import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,7 +13,6 @@ import {
 import {
     MenuIcon,
     UserIcon,
-    SettingsIcon,
     LogOutIcon,
 } from "lucide-react"
 import {
@@ -23,30 +21,35 @@ import {
     SheetTrigger,
     SheetTitle
 } from "@/components/ui/sheet"
-import { cn } from "@/lib/utils"
+// import { cn } from "@/lib/utils"
 import { SidebarContent } from "./Sidebar"
+import Link from "next/link"
+import Image from "next/image"
 // import { MobileSidebar } from "./mobile-sidebar"
 
 interface MobileSidebarProps {
-    className?: string
+    open: boolean
+    setOpen: Function
 }
 
-export const MobileSidebar: React.FC<MobileSidebarProps> = ({ className }) => {
+export const MobileSidebar: React.FC<MobileSidebarProps> = ({ open, setOpen }) => {
     return (
-        <Sheet>
+        <Sheet open={open} onOpenChange={() => setOpen(!open)}>
             <SheetTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn("hover:bg-amber-50", className)}
-                >
-                    <MenuIcon className="h-5 w-5 text-amber-600" />
-                    <span className="sr-only">Toggle sidebar</span>
-                </Button>
+                <MenuIcon className="h-5 w-5 cursor-pointer text-white" />
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 p-0">
+            <SheetContent side="left" className="w-64 ">
                 <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                <SidebarContent isCollapsed={false} isMobile={true} />
+                <Link href="/" className="cursor-pointer flex items-center gap-3 px-5  pt-5 pb-0">
+                    <div>
+                        <Image className="w-7 h-7" src="/logo/short-logo1.png" alt="logo" width={300} height={300} />
+                        {/* <LogoIcon /> */}
+                    </div>
+                    <p className="text-white text-xl -mx-3 ">tascape</p>
+                </Link>
+                <div >
+                    <SidebarContent open={open} setOpen={setOpen} isCollapsed={false} isMobile={true} onToggleCollapse={() => undefined} />
+                </div>
             </SheetContent>
         </Sheet>
     )
@@ -60,59 +63,40 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({ className }) => {
 //Default component props
 interface NavbarProps {
     isCollapsed: boolean
-    onToggleCollapse: () => void
+    // onToggleCollapse: () => void
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
     // isCollapsed,
-    onToggleCollapse
+    // onToggleCollapse
 }) => {
     const handleLogout = () => {
         // Add logout logic here
         console.log("Logout clicked")
     }
 
-    const handleSettings = () => {
-        // Add settings navigation logic here
-        console.log("Settings clicked")
-    }
-
+    const [open, setOpen] = useState(false)
     return (
         <header className="sticky  top-0 z-50 w-full shadow ">
             <div className=" flex h-14 items-center justify-between px-4">
-                {/* Left side - Mobile sidebar and Collapse button */}
-                <div className="flex items-center gap-2">
-                    {/* Mobile sidebar - visible only on small devices */}
+                <div className="flex items-center  w-full gap-2">
                     <div className="md:hidden">
-                        <MobileSidebar />
+                        <MobileSidebar open={open} setOpen={setOpen} />
                     </div>
-
-                    {/* Collapse button - hidden on small devices */}
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={onToggleCollapse}
-                            className="hidden md:flex"
-                        >
-                            <MenuIcon className="h-5 w-5 text-t-gray" />
-                        </Button>
-                        <p className="text-white/80 ">Welcome, <span className="text-2xl">John Doe</span></p>
-                    </div>
+                    <Link href="/" className="cursor-pointer flex items-center gap-3">
+                        <div>
+                            <Image className="w-7 h-7" src="/logo/short-logo1.png" alt="logo" width={300} height={300} />
+                            {/* <LogoIcon /> */}
+                        </div>
+                        <p className="text-white text-xl -mx-3 ">tascape</p>
+                    </Link>
 
                 </div>
 
-                {/* Right side - Notifications and Profile dropdown */}
                 <div className="flex items-center gap-2 ">
-                    {/* Profile dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button className="relative h-8 w-8 rounded-full">
-                                <div className="h-8 w-8 rounded-full flex items-center justify-center">
-                                    <UserIcon className="h-4 w-4 text-primary-foreground" />
-                                </div>
-                                <span className="sr-only">Open user menu</span>
-                            </Button>
+                            <UserIcon className="h-6 cursor-pointer w-6 text-white" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent className="w-56 bg-white" align="end" forceMount>
                             <DropdownMenuLabel className="font-normal">
@@ -124,10 +108,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 </div>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleSettings}>
-                                <SettingsIcon className="mr-2 h-4 w-4" />
-                                <span>Settings</span>
-                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                                 <LogOutIcon className="mr-2 h-4 w-4" />

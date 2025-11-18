@@ -43,9 +43,9 @@ export default function RootLayout({
       <body
         className={`${ubuntu.className} antialiased`}
       >
-        <AdminLayout>
+        <>
           {children}
-        </AdminLayout>
+        </>
       </body>
     </html>
   );
