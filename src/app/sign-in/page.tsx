@@ -1,59 +1,61 @@
 "use client"
 
-import React, { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useFormik } from "formik"
-import * as yup from "yup"
 import { toast } from "sonner"
-import { Input } from "@/components/ui/input"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import TextInput from "@/components/core/TextInput"
+import { Label } from "@/components/ui/label"
+import { useLogin } from "@/hooks/auth.hook"
+import { LoginValidation } from "@/validate/auth.validate"
+import { useAuthStore } from "@/store/authStore"
 
-interface TextInputProps extends React.ComponentProps<typeof Input> {
-    error?: string
-}
-
-const TextInput: React.FC<TextInputProps> = ({ error, ...props }) => (
-    <div className="space-y-1">
-        <Input
-            {...props}
-            aria-invalid={Boolean(error)}
-            className="h-11  rounded-full "
-        />
-        {error && <p className="text-xs text-red-400">{error}</p>}
-    </div>
-)
 
 const SignInForm = () => {
-    const [isLoading, setIsLoading] = useState(false)
-
-    const { handleChange, values, touched, errors, handleSubmit, resetForm } = useFormik({
+    const router = useRouter();
+    const { mutateAsync, isPending: isLoginLoading } = useLogin();
+    const { setAuth } = useAuthStore();
+    const { handleChange, values, touched, errors, handleSubmit, resetForm } =
+      useFormik({
         initialValues: {
-            email: "",
-            password: "",
+          email: "",
+          password: "",
         },
-        validationSchema: yup.object().shape({
-            email: yup.string().email("Enter a valid email").required("This Field is Required"),
-            password: yup.string().min(6, "Minimum 6 characters").required("This Field is Required"),
-        }),
+        validationSchema: LoginValidation,
         onSubmit: async (data) => {
-            try {
-                setIsLoading(true)
-                // await new Promise((resolve) => setTimeout(resolve, 1200))
-                console.log(data)
-                toast.success(`Welcome back, ${data.email}!`)
-                resetForm()
-            } catch {
-                toast.error("Unable to sign in")
-            } finally {
-                setIsLoading(false)
+          try {
+            const payload = {
+              email: data.email,
+              password: data.password,
+            };
+            const result = await mutateAsync(payload);
+            if(result.success) {
+              if (result.user && result.token) {
+                setAuth({
+                  user: result.user,
+                  token: result.token,
+                });
+              }
+              toast.success(`${result.message}`);
+              resetForm();
+              router.push('/');
+            } else {
+              toast.error(result.message);
             }
+          } catch (error: any) {
+            error.errors.forEach((key: { attr: string; detail: string }) => {
+              toast.error(`${key?.attr} - ${key?.detail}`);
+            });
+          }
         },
-    })
-
+      });
+  
     return (
         <div>
             <form onSubmit={handleSubmit} className="space-y-3">
+                <Label htmlFor="email" className="text-sm mx-3 text-white/60">Enter Your Email</Label>
                 <TextInput
                     id="email"
                     type="email"
@@ -63,6 +65,7 @@ const SignInForm = () => {
                     error={Boolean(errors.email) && touched.email ? errors.email : undefined}
                     placeholder="Your email"
                 />
+                <Label htmlFor="password" className="text-sm mx-3 text-white/60">Enter Your Password</Label>
                 <TextInput
                     id="password"
                     type="password"
@@ -72,13 +75,13 @@ const SignInForm = () => {
                     error={Boolean(errors.password) && touched.password ? errors.password : undefined}
                     placeholder="Password"
                 />
-                <div>
+                <div className="mt-5">
                     <Button
                         type="submit"
-                        disabled={isLoading}
-                        className="w-full h-11 cursor-pointer rounded-full bg-white text-black font-semibold"
+                        disabled={isLoginLoading}
+                        className="w-full h-11 cursor-pointer rounded-full bg-white hover:bg-t-orange-light text-black font-semibold"
                     >
-                        {isLoading ? "Signing in..." : "Sign in"}
+                        {isLoginLoading ? "Signing in..." : "Sign in"}
                     </Button>
                 </div>
             </form>
@@ -104,7 +107,7 @@ const Page = () => {
                     </div>
                     <div className="space-y-2">
                         <div className="text-sm text-center text-white/60">
-                            First time here? <Link href="/sign-up" className="mx-1 font-semibold cursor-pointer text-orange-300">Sign up for free</Link>
+                            First time here? <Link href="/sign-up" className="mx-1 font-semibold cursor-pointer text-t-orange-light">Sign up</Link>
                         </div>
                     </div>
                 </div>

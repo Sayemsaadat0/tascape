@@ -6,6 +6,8 @@
   --font-sans: var(--font-ubuntu), ui-sans-serif, system-ui, sans-serif;
   --color-t-black : #2e2e30;
   --color-t-gray : #fdf3e9;
+  --color-t-orange : #ffae17 ;
+  --color-t-orange-light : #fdc864  ;
   /* --color-custom-button-color: var(--custom-button-color); */
 }
 
