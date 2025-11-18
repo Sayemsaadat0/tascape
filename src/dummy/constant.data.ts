@@ -1,8 +1,11 @@
 import { 
   HomeIcon, 
   SettingsIcon,
-  ChevronDownIcon,
-  ChevronRightIcon
+  Users2Icon,
+  BriefcaseIcon,
+  UserIcon,
+  ActivityIcon,
+  CheckSquareIcon
 } from "lucide-react"
 
 export interface SidebarRoute {
@@ -20,34 +23,41 @@ export const sidebarRoutes: SidebarRoute[] = [
     icon: HomeIcon,
     path: "/"
   },
-  // {
-  //   id: "article",
-  //   title: "Article",
-  //   icon: FileTextIcon,
-  //   children: [
-  //     {
-  //       id: "category",
-  //       title: "Category",
-  //       icon: FolderIcon,
-  //       path: "/article/category"
-  //     },
-  //     {
-  //       id: "article-list",
-  //       title: "Article List",
-  //       icon: FileTextIcon,
-  //       path: "/article/list"
-  //     }
-  //   ]
-  // },
+
   {
-    id: "service",
-    title: "Service",
-    icon: SettingsIcon,
-    path: "/service"
+    id: "teams",
+    title: "Teams",
+    icon: Users2Icon,
+    path: "/teams"
+  },
+  {
+    id: "projects",
+    title: "Projects",
+    icon: BriefcaseIcon,
+    path: "/projects"
+  },
+  {
+    id: "tasks",
+    title: "Tasks",
+    icon: CheckSquareIcon,
+    path: "/tasks"
+  },
+    {
+      id: "users",
+      title: "Users",
+      icon: UserIcon,
+      path: "/users"
+    },
+    {
+      id: "members",
+      title: "Members",
+      icon: UserIcon,
+      path: "/members"
+    },
+  {
+    id: "activity-logs",
+    title: "Activity Logs",
+    icon: ActivityIcon,
+    path: "/activity-logs"
   }
 ]
-
-export const sidebarIcons = {
-  ChevronDown: ChevronDownIcon,
-  ChevronRight: ChevronRightIcon
-}

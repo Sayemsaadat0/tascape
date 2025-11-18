@@ -41,3 +41,17 @@ export const useLogin = () => {
         }),
     });
 };
+
+
+
+
+
+export const useLogout = () => {
+    return useMutation({
+        mutationFn: async () =>
+        await axiousResuest({
+            url: `api/auth/logout`,
+            method: "post",
+        }),
+    });
+};

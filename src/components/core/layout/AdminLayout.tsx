@@ -35,11 +35,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           {/* Main Content Area */}
           <div className="flex flex-1 flex-col overflow-hidden">
             {/* Navbar */}
-            <Navbar isCollapsed={false} />
+            <Navbar  />
 
             {/* Page Content */}
             <main className={cn(
-              "flex-1 overflow-auto min-h-screen border border-gray-400 bg-t-gray! rounded-lg transition-all duration-300",
+              "flex-1 overflow-auto min-h-screen border border-gray-400 bg-t-gray!  transition-all duration-300",
 
             )}>
               <div className="mx-auto p-5   ">

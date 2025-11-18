@@ -45,9 +45,11 @@ const SignInForm = () => {
               toast.error(result.message);
             }
           } catch (error: any) {
-            error.errors.forEach((key: { attr: string; detail: string }) => {
-              toast.error(`${key?.attr} - ${key?.detail}`);
-            });
+            // console.log(errorP;
+            toast.error(error.message);
+            // error.errors.forEach((key: { attr: string; detail: string }) => {
+            //   toast.error(`${key?.attr} - ${key?.detail}`);
+            // });
           }
         },
       });
