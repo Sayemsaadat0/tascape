@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import "@/DB/db"
 import { Team } from "@/models/Team"
+import { Member } from "@/models/Member"
 import { authenticateRequest } from "@/lib/auth"
 import { Types } from "mongoose"
 
@@ -18,24 +19,15 @@ const extractUserIdParam = (value: unknown) => {
   return value.trim()
 }
 
-const isValidMembersArray = (members: unknown) => {
+const isValidMemberIdsArray = (members: unknown) => {
   if (!Array.isArray(members)) return false
   return members.every(
-    (member) =>
-      member &&
-      typeof member === "object" &&
-      typeof (member as any).name === "string" &&
-      typeof (member as any).role === "string" &&
-      typeof (member as any).capacity === "number"
+    (memberId) =>
+      memberId &&
+      (typeof memberId === "string" || memberId instanceof Types.ObjectId) &&
+      Types.ObjectId.isValid(memberId)
   )
 }
-
-const sanitizeMembers = (members: any[]) =>
-  members.map((member) => ({
-    name: member.name.trim(),
-    role: member.role.trim(),
-    capacity: member.capacity,
-  }))
 
 export async function GET(
   request: Request,
@@ -81,7 +73,8 @@ export async function GET(
     const team = await Team.findOne({
       _id: teamObjectId,
       user_id: queryUserId,
-    })
+    }).populate("members")
+
     if (!team) {
       return NextResponse.json(
         { success: false, message: "Team not found" },
@@ -89,8 +82,10 @@ export async function GET(
       )
     }
 
+    const teamObj = team.toObject({ flattenMaps: true })
+
     return NextResponse.json(
-      { success: true, message: "Team retrieved", result: team },
+      { success: true, message: "Team retrieved", result: teamObj },
       { status: 200 }
     )
   } catch (error) {
@@ -151,17 +146,45 @@ export async function PATCH(
     }
 
     if (typeof members !== "undefined") {
-      if (!isValidMembersArray(members)) {
+      if (!isValidMemberIdsArray(members)) {
         return NextResponse.json(
           {
             success: false,
-            message:
-              "Members must be an array of { name: string, role: string, capacity: number }",
+            message: "Members must be an array of valid member IDs (ObjectId strings)",
           },
           { status: 400 }
         )
       }
-      updatePayload.members = sanitizeMembers(members)
+
+      // Convert member IDs to ObjectIds and validate they exist and belong to user
+      const memberObjectIds: Types.ObjectId[] = []
+      for (const memberId of members) {
+        if (!Types.ObjectId.isValid(memberId)) {
+          return NextResponse.json(
+            { success: false, message: `Invalid member ID: ${memberId}` },
+            { status: 400 }
+          )
+        }
+        memberObjectIds.push(new Types.ObjectId(memberId))
+      }
+
+      // Validate all members exist and belong to the user
+      const existingMembers = await Member.find({
+        _id: { $in: memberObjectIds },
+        user_id: resolvedUserId,
+      })
+
+      if (existingMembers.length !== memberObjectIds.length) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "One or more member IDs not found or do not belong to you",
+          },
+          { status: 400 }
+        )
+      }
+
+      updatePayload.members = memberObjectIds
     }
 
     if (Object.keys(updatePayload).length === 0) {
@@ -175,7 +198,7 @@ export async function PATCH(
       { _id: teamObjectId, user_id: resolvedUserId },
       { $set: updatePayload },
       { new: true }
-    )
+    ).populate("members")
 
     if (!updatedTeam) {
       return NextResponse.json(
@@ -184,8 +207,10 @@ export async function PATCH(
       )
     }
 
+    const teamObj = updatedTeam.toObject({ flattenMaps: true })
+
     return NextResponse.json(
-      { success: true, message: "Team updated", result: updatedTeam },
+      { success: true, message: "Team updated", result: teamObj },
       { status: 200 }
     )
   } catch (error) {

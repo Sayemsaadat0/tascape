@@ -17,7 +17,9 @@ export interface ITask extends Document {
   title: string
   description?: string
   assigned_member?: Types.ObjectId
+  member_id?: Types.ObjectId
   project_id: Types.ObjectId
+  user_id: string
   priority: TaskPriority
   status: TaskStatus
   createdAt: Date
@@ -32,11 +34,16 @@ const TaskSchema = new Schema<ITask>(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
+    member_id: {
+      type: Schema.Types.ObjectId,
+      ref: "Member",
+    },
     project_id: {
       type: Schema.Types.ObjectId,
       ref: "Project",
       required: true,
     },
+    user_id: { type: String, required: true, trim: true },
     priority: {
       type: String,
       enum: TASK_PRIORITIES,
@@ -53,8 +60,12 @@ const TaskSchema = new Schema<ITask>(
   { timestamps: true }
 )
 
-export const Task: Model<ITask> =
-  (models.Task as Model<ITask>) || model<ITask>("Task", TaskSchema)
+// Delete cached model if it exists to force recompilation with new schema
+if (models.Task) {
+  delete models.Task
+}
+
+export const Task: Model<ITask> = model<ITask>("Task", TaskSchema)
 
 export default Task
 

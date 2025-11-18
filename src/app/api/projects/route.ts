@@ -27,24 +27,10 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const queryUserId = extractString(searchParams.get("user_id"))
     const teamIdParam = extractString(searchParams.get("team_id"))
+    const requestUserId = authResult.payload.userId
 
-    if (!queryUserId) {
-      return NextResponse.json(
-        { success: false, message: "user_id query parameter is required" },
-        { status: 400 }
-      )
-    }
-
-    if (authResult.payload.userId !== queryUserId) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden: user mismatch" },
-        { status: 403 }
-      )
-    }
-
-    const filter: Record<string, unknown> = { user_id: queryUserId }
+    const filter: Record<string, unknown> = { user_id: requestUserId }
 
     if (teamIdParam) {
       const teamObjectId = resolveObjectId(teamIdParam)
@@ -59,7 +45,12 @@ export async function GET(request: Request) {
 
     const projects = await Project.find(filter)
       .sort({ createdAt: -1 })
-      .populate("team_id")
+      .populate({
+        path: "team_id",
+        populate: {
+          path: "members",
+        },
+      })
 
     const formattedProjects = projects.map((project) => {
       const projectObj = project.toObject()

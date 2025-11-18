@@ -28,8 +28,12 @@ const ProjectSchema = new Schema<IProject>(
   { timestamps: true }
 )
 
-export const Project: Model<IProject> =
-  (models.Project as Model<IProject>) || model<IProject>("Project", ProjectSchema)
+// Delete cached model if it exists to force recompilation with new schema
+if (models.Project) {
+  delete models.Project
+}
+
+export const Project: Model<IProject> = model<IProject>("Project", ProjectSchema)
 
 export default Project
 

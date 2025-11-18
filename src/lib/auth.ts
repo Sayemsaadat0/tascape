@@ -42,12 +42,15 @@ export const authenticateRequest = (request: Request): AuthResult => {
 
   try {
     const decoded = jwt.verify(token, secret) as jwt.JwtPayload | string
-    const userId =
-      typeof decoded === "string"
-        ? decoded
-        : typeof decoded.sub === "string"
-          ? decoded.sub
-          : ""
+    // Extract userId from sub field (which is an ObjectId)
+    let userId = ""
+    if (typeof decoded === "string") {
+      userId = decoded
+    } else if (decoded.sub) {
+      // sub is an ObjectId - convert to string for comparison
+      // ObjectId can be stringified directly
+      userId = String(decoded.sub).trim()
+    }
 
     if (!userId) {
       return buildErrorResponse("Invalid token payload", 401)

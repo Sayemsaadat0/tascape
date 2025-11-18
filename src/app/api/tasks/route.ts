@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server"
 import "@/DB/db"
 import { authenticateRequest } from "@/lib/auth"
+import { Types } from "mongoose"
+// Import all models to ensure they are registered before populate operations
 import { Task } from "@/models/Task"
 import { Project } from "@/models/Project"
-import { Types } from "mongoose"
+import { Team } from "@/models/Team"
+import { Member } from "@/models/Member"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -48,7 +51,7 @@ export async function GET(request: Request) {
       )
     }
 
-    // Verify project exists
+    // Verify project exists and belongs to authenticated user
     const project = await Project.findById(projectObjectId)
     if (!project) {
       return NextResponse.json(
@@ -57,23 +60,81 @@ export async function GET(request: Request) {
       )
     }
 
-    const tasks = await Task.find({ project_id: projectObjectId })
+    // Verify project ownership
+    if (project.user_id !== authResult.payload.userId) {
+      return NextResponse.json(
+        { success: false, message: "Forbidden: Project does not belong to you" },
+        { status: 403 }
+      )
+    }
+
+    // Simple project info without nested populate
+    const projectInfo = {
+      _id:
+        project._id instanceof Types.ObjectId
+          ? project._id.toString()
+          : String(project._id),
+      name: project.name,
+      team_id:
+        project.team_id instanceof Types.ObjectId
+          ? project.team_id.toString()
+          : String(project.team_id),
+      user_id: project.user_id,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    }
+
+    // Fetch tasks for this project, ensuring they belong to the authenticated user
+    const tasks = await Task.find({ 
+      project_id: projectObjectId,
+      user_id: authResult.payload.userId 
+    })
       .sort({ createdAt: -1 })
       .populate("assigned_member", "name email")
+      .populate("member_id")
       .populate("project_id", "name")
+
+    // Format each task with project_Info and assigned_member_info
+    const formattedTasks = tasks.map((task) => {
+      const taskObj = task.toObject()
+      
+      // Get assigned_member_info from populated member_id
+      let assignedMemberInfo: any = null
+      if (taskObj.member_id && typeof taskObj.member_id === "object") {
+        const member = taskObj.member_id as any
+        assignedMemberInfo = {
+          _id: member._id,
+          name: member.name,
+          role: member.role,
+          capacity: member.capacity,
+          used_capacity: member.used_capacity,
+        }
+      }
+
+      return {
+        ...taskObj,
+        project_id: projectObjectId.toString(),
+        project_Info: projectInfo,
+        assigned_member_info: assignedMemberInfo,
+      }
+    })
 
     return NextResponse.json(
       {
         success: true,
         message: "Tasks retrieved",
-        results: tasks,
+        results: formattedTasks,
       },
       { status: 200 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching tasks", error)
     return NextResponse.json(
-      { success: false, message: "Failed to fetch tasks" },
+      { 
+        success: false, 
+        message: "Failed to fetch tasks",
+        error: error?.message || "Unknown error occurred"
+      },
       { status: 500 }
     )
   }
@@ -118,13 +179,43 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verify project exists
+    // Verify project exists and belongs to authenticated user
     const project = await Project.findById(projectObjectId)
     if (!project) {
       return NextResponse.json(
         { success: false, message: "Project not found" },
         { status: 404 }
       )
+    }
+
+    // Verify project ownership
+    if (project.user_id !== authResult.payload.userId) {
+      return NextResponse.json(
+        { success: false, message: "Forbidden: Project does not belong to you" },
+        { status: 403 }
+      )
+    }
+
+    // Get team separately if needed for member validation
+    let team = null
+    if (assigned_member) {
+      team = await Team.findById(project.team_id).populate("members")
+    }
+
+    // Simple project info
+    const projectInfo = {
+      _id:
+        project._id instanceof Types.ObjectId
+          ? project._id.toString()
+          : String(project._id),
+      name: project.name,
+      team_id:
+        project.team_id instanceof Types.ObjectId
+          ? project.team_id.toString()
+          : String(project.team_id),
+      user_id: project.user_id,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
     }
 
     // Validate priority if provided
@@ -151,37 +242,141 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate assigned_member if provided
-    let assignedMemberObjectId: Types.ObjectId | undefined
+    // Validate assigned_member if provided (now accepts member ObjectId)
+    let assignedMemberInfo: any = null
+    let memberObjectId: Types.ObjectId | null = null
+
     if (assigned_member) {
       const resolvedAssignedMember = extractString(assigned_member)
-      if (resolvedAssignedMember) {
-        const resolvedId = resolveObjectId(resolvedAssignedMember)
-        if (!resolvedId) {
-          return NextResponse.json(
-            { success: false, message: "Invalid assigned_member" },
-            { status: 400 }
-          )
-        }
-        assignedMemberObjectId = resolvedId
+      
+      if (!resolvedAssignedMember) {
+        return NextResponse.json(
+          { success: false, message: "assigned_member must be a valid member ID (ObjectId)" },
+          { status: 400 }
+        )
+      }
+
+      memberObjectId = resolveObjectId(resolvedAssignedMember)
+      if (!memberObjectId) {
+        return NextResponse.json(
+          { success: false, message: "Invalid member ID format" },
+          { status: 400 }
+        )
+      }
+
+      // Validate that the member exists and belongs to the user
+      const member = await Member.findOne({
+        _id: memberObjectId,
+        user_id: authResult.payload.userId,
+      })
+
+      if (!member) {
+        return NextResponse.json(
+          { success: false, message: "Member not found or does not belong to you" },
+          { status: 404 }
+        )
+      }
+
+      // Validate that the member is in the project's team
+      if (!team || !team.members || !Array.isArray(team.members)) {
+        return NextResponse.json(
+          { success: false, message: "Project team has no members" },
+          { status: 400 }
+        )
+      }
+
+      const teamMemberIds = team.members.map((m: any) => 
+        m._id ? m._id.toString() : m.toString()
+      )
+      
+      if (!teamMemberIds.includes(memberObjectId.toString())) {
+        return NextResponse.json(
+          { success: false, message: "Member is not part of the project's team" },
+          { status: 400 }
+        )
+      }
+
+      // Check if member has available capacity
+      if (member.used_capacity >= member.capacity) {
+        return NextResponse.json(
+          { success: false, message: "Member has reached maximum capacity" },
+          { status: 400 }
+        )
+      }
+
+      assignedMemberInfo = {
+        _id: member._id,
+        name: member.name,
+        role: member.role,
+        capacity: member.capacity,
+        used_capacity: member.used_capacity,
       }
     }
 
-    const task = await Task.create({
+    const taskData: any = {
       title: title.trim(),
       description: description?.trim(),
-      assigned_member: assignedMemberObjectId,
       project_id: projectObjectId,
+      user_id: authResult.payload.userId,
       priority: priority || "Medium",
       status: status || "Pending",
-    })
+    }
 
+    if (memberObjectId) {
+      taskData.member_id = memberObjectId
+    }
+
+    const task = await Task.create(taskData)
+
+    // Increment member's used_capacity after task creation
+    if (memberObjectId) {
+      await Member.findByIdAndUpdate(memberObjectId, {
+        $inc: { used_capacity: 1 },
+      })
+      
+      // Refresh member info for response
+      const updatedMember = await Member.findById(memberObjectId)
+      if (updatedMember) {
+        assignedMemberInfo = {
+          _id: updatedMember._id,
+          name: updatedMember.name,
+          role: updatedMember.role,
+          capacity: updatedMember.capacity,
+          used_capacity: updatedMember.used_capacity,
+        }
+      }
+    }
+    
     const populatedTask = await Task.findById(task._id)
       .populate("assigned_member", "name email")
+      .populate("member_id")
       .populate("project_id", "name")
 
+    // Format response with project_Info and assigned_member_info
+    const taskObj = populatedTask?.toObject() || task.toObject()
+    
+    // Get assigned_member_info from populated member_id if not already set
+    if (!assignedMemberInfo && taskObj.member_id && typeof taskObj.member_id === "object") {
+      const member = taskObj.member_id as any
+      assignedMemberInfo = {
+        _id: member._id,
+        name: member.name,
+        role: member.role,
+        capacity: member.capacity,
+        used_capacity: member.used_capacity,
+      }
+    }
+    
+    // Ensure project_id is a string, not a populated object
+    const response = {
+      ...taskObj,
+      project_id: projectObjectId.toString(),
+      project_Info: projectInfo,
+      assigned_member_info: assignedMemberInfo,
+    }
+
     return NextResponse.json(
-      { success: true, message: "Task created successfully", result: populatedTask },
+      { success: true, message: "Task created successfully", result: response },
       { status: 201 }
     )
   } catch (error) {
