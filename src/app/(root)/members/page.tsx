@@ -73,14 +73,14 @@ const MembersPage = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 p-5">
         <p className="text-white/60">Failed to load members</p>
       </div>
     );
   }
 
   return (
-    <div className=" space-y-3">
+    <div className=" space-y-3 p-5">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-t-black mb-4">
           Members

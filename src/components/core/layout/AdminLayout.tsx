@@ -39,10 +39,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
             {/* Page Content */}
             <main className={cn(
-              "flex-1 overflow-auto min-h-screen border border-gray-400 bg-t-gray!  transition-all duration-300",
+              "flex-1 overflow-auto min-h-screen  bg-t-gray!  transition-all duration-300",
 
             )}>
-              <div className="mx-auto p-5   ">
+              <div className="mx-auto   ">
                 {children}
               </div>
             </main>

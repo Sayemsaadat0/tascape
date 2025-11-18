@@ -43,7 +43,7 @@ const TeamsPage = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 p-5">
         <p className="text-white/60">Failed to load teams</p>
       </div>
     );
@@ -51,7 +51,7 @@ const TeamsPage = () => {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-5">
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
@@ -82,7 +82,7 @@ const TeamsPage = () => {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 p-5">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-t-black mb-4">
           Teams

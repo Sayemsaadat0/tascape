@@ -94,8 +94,8 @@ export const Navbar = () => {
   };
 
   return (
-    <header className="sticky  top-0 z-50 w-full shadow ">
-      <div className=" flex h-16 items-center justify-between px-4">
+    <header className="sticky  border-b border-t-gray/30 top- z-50 w-full  ">
+      <div className=" flex h-[63px] items-center justify-between px-4">
         <div className="flex items-center  w-full gap-2">
           <div className="md:hidden">
             <MobileSidebar open={open} setOpen={setOpen} />
@@ -117,16 +117,8 @@ export const Navbar = () => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex items-center gap-2 bg-t-black/70 px-4 py-2 rounded-md border-2 border-white/20 shadow cursor-pointer hover:bg-t-black/80 transition-colors">
+            <div className="flex items-center gap-2 bg-t-black/70 px-2 py-2 rounded-full border-2 border-white/20 shadow cursor-pointer hover:bg-t-black/80 transition-colors">
               <UserIcon className="h-5 w-5 text-white" />
-              <div className="flex flex-col text-left">
-                <span className="text-sm font-semibold text-white leading-tight">
-                  {user?.name || "User"}
-                </span>
-                <span className="text-xs text-white/60 leading-tight">
-                  {user?.email || "user@example.com"}
-                </span>
-              </div>
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent

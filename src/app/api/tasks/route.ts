@@ -23,106 +23,167 @@ const resolveObjectId = (value: string) => {
 }
 
 // ======================
-// GET /api/tasks?project_id={project_id}
-// - Get all tasks for a specific project
+// GET /api/tasks?project_id={project_id} (optional)
+// - If project_id is provided: Get all tasks for a specific project
+// - If project_id is not provided: Get all tasks for the authenticated user
+// 
+// Authentication Flow:
+// 1. Token is extracted from Authorization header (Bearer token)
+// 2. Token is decoded using JWT_SECRET
+// 3. User ID is extracted from token's 'sub' field
+// 4. All tasks are filtered by user_id to ensure users only see their own tasks
 // ======================
 export async function GET(request: Request) {
+  // Authenticate request - extracts token from headers, decodes it, and gets user ID from 'sub' field
   const authResult = authenticateRequest(request)
   if ("response" in authResult) {
     return authResult.response
   }
 
+  // authResult.payload.userId contains the user ID extracted from token's 'sub' field
+  const userId = authResult.payload.userId
+
   try {
     const { searchParams } = new URL(request.url)
     const projectIdParam = extractString(searchParams.get("project_id"))
 
-    if (!projectIdParam) {
-      return NextResponse.json(
-        { success: false, message: "project_id query parameter is required" },
-        { status: 400 }
-      )
+    let projectObjectId: Types.ObjectId | null = null
+    let projectInfo: any = null
+
+    // If project_id is provided, validate it
+    if (projectIdParam) {
+      projectObjectId = resolveObjectId(projectIdParam)
+      if (!projectObjectId) {
+        return NextResponse.json(
+          { success: false, message: "Invalid project_id" },
+          { status: 400 }
+        )
+      }
+
+      // Verify project exists and belongs to authenticated user
+      const project = await Project.findById(projectObjectId)
+      if (!project) {
+        return NextResponse.json(
+          { success: false, message: "Project not found" },
+          { status: 404 }
+        )
+      }
+
+      // Verify project ownership - ensure project belongs to the authenticated user (from token)
+      if (project.user_id !== userId) {
+        return NextResponse.json(
+          { success: false, message: "Forbidden: Project does not belong to you" },
+          { status: 403 }
+        )
+      }
+
+      // Simple project info without nested populate
+      projectInfo = {
+        _id:
+          project._id instanceof Types.ObjectId
+            ? project._id.toString()
+            : String(project._id),
+        name: project.name,
+        team_id:
+          project.team_id instanceof Types.ObjectId
+            ? project.team_id.toString()
+            : String(project.team_id),
+        user_id: project.user_id,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
+      }
     }
 
-    const projectObjectId = resolveObjectId(projectIdParam)
-    if (!projectObjectId) {
-      return NextResponse.json(
-        { success: false, message: "Invalid project_id" },
-        { status: 400 }
-      )
+    // Build query - ALWAYS filter by user_id from token to ensure user-based task filtering
+    // This ensures users can only see tasks they created (user_id from token's 'sub' field)
+    const query: any = {
+      user_id: userId // User ID extracted from token's 'sub' field
+    }
+    
+    if (projectObjectId) {
+      query.project_id = projectObjectId
     }
 
-    // Verify project exists and belongs to authenticated user
-    const project = await Project.findById(projectObjectId)
-    if (!project) {
-      return NextResponse.json(
-        { success: false, message: "Project not found" },
-        { status: 404 }
-      )
-    }
-
-    // Verify project ownership
-    if (project.user_id !== authResult.payload.userId) {
-      return NextResponse.json(
-        { success: false, message: "Forbidden: Project does not belong to you" },
-        { status: 403 }
-      )
-    }
-
-    // Simple project info without nested populate
-    const projectInfo = {
-      _id:
-        project._id instanceof Types.ObjectId
-          ? project._id.toString()
-          : String(project._id),
-      name: project.name,
-      team_id:
-        project.team_id instanceof Types.ObjectId
-          ? project.team_id.toString()
-          : String(project.team_id),
-      user_id: project.user_id,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-    }
-
-    // Fetch tasks for this project, ensuring they belong to the authenticated user
-    const tasks = await Task.find({ 
-      project_id: projectObjectId,
-      user_id: authResult.payload.userId 
-    })
+    // Fetch tasks, ensuring they belong to the authenticated user
+    const tasks = await Task.find(query)
       .sort({ createdAt: -1 })
       .populate("assigned_member", "name email")
       .populate("member_id")
       .populate("project_id", "name")
 
     // Format each task with project_Info and assigned_member_info
-    const formattedTasks = tasks.map((task) => {
-      const taskObj = task.toObject()
-      
-      // Get assigned_member_info from populated member_id
-      let assignedMemberInfo: any = null
-      if (taskObj.member_id && typeof taskObj.member_id === "object") {
-        const member = taskObj.member_id as any
-        assignedMemberInfo = {
-          _id: member._id,
-          name: member.name,
-          role: member.role,
-          capacity: member.capacity,
-          used_capacity: member.used_capacity,
+    const formattedTasks = await Promise.all(
+      tasks.map(async (task) => {
+        const taskObj = task.toObject()
+        
+        // Get assigned_member_info from populated member_id
+        let assignedMemberInfo: any = null
+        if (taskObj.member_id && typeof taskObj.member_id === "object") {
+          const member = taskObj.member_id as any
+          assignedMemberInfo = {
+            _id: member._id,
+            name: member.name,
+            role: member.role,
+            capacity: member.capacity,
+            used_capacity: member.used_capacity,
+          }
         }
-      }
 
-      return {
-        ...taskObj,
-        project_id: projectObjectId.toString(),
-        project_Info: projectInfo,
-        assigned_member_info: assignedMemberInfo,
-      }
-    })
+        // Get project info for this task if not already set
+        let taskProjectInfo = projectInfo
+        if (!taskProjectInfo && taskObj.project_id && typeof taskObj.project_id === "object") {
+          const populatedProject = taskObj.project_id as any
+          taskProjectInfo = {
+            _id: populatedProject._id?.toString() || String(populatedProject._id),
+            name: populatedProject.name,
+            team_id: populatedProject.team_id?.toString() || String(populatedProject.team_id),
+            user_id: populatedProject.user_id,
+            createdAt: populatedProject.createdAt,
+            updatedAt: populatedProject.updatedAt,
+          }
+        } else if (!taskProjectInfo) {
+          // If project_id is not populated, fetch it
+          const taskProjectId = taskObj.project_id
+          if (taskProjectId) {
+            const project = await Project.findById(taskProjectId)
+            // Only include project info if it belongs to the authenticated user
+            if (project && project.user_id === userId) {
+              taskProjectInfo = {
+                _id: project._id instanceof Types.ObjectId ? project._id.toString() : String(project._id),
+                name: project.name,
+                team_id: project.team_id instanceof Types.ObjectId ? project.team_id.toString() : String(project.team_id),
+                user_id: project.user_id,
+                createdAt: project.createdAt,
+                updatedAt: project.updatedAt,
+              }
+            }
+          }
+        }
+
+        // Convert project_id to string format
+        let projectIdString = ""
+        if (taskObj.project_id instanceof Types.ObjectId) {
+          projectIdString = taskObj.project_id.toString()
+        } else if (typeof taskObj.project_id === "object" && taskObj.project_id !== null) {
+          const populatedProject = taskObj.project_id as any
+          projectIdString = populatedProject._id?.toString() || String(populatedProject._id || "")
+        } else if (taskObj.project_id) {
+          projectIdString = String(taskObj.project_id)
+        }
+
+        return {
+          ...taskObj,
+          project_id: projectIdString,
+          project_Info: taskProjectInfo,
+          assigned_member_info: assignedMemberInfo,
+        }
+      })
+    )
 
     return NextResponse.json(
       {
         success: true,
-        message: "Tasks retrieved",
+        message: projectObjectId ? "Tasks retrieved for project" : "All tasks retrieved",
         results: formattedTasks,
       },
       { status: 200 }
@@ -143,12 +204,22 @@ export async function GET(request: Request) {
 // ======================
 // POST /api/tasks
 // - Create a new task
+// 
+// Authentication Flow:
+// 1. Token is extracted from Authorization header (Bearer token)
+// 2. Token is decoded using JWT_SECRET
+// 3. User ID is extracted from token's 'sub' field
+// 4. Task is created with user_id from token to ensure task ownership
 // ======================
 export async function POST(request: Request) {
+  // Authenticate request - extracts token from headers, decodes it, and gets user ID from 'sub' field
   const authResult = authenticateRequest(request)
   if ("response" in authResult) {
     return authResult.response
   }
+
+  // authResult.payload.userId contains the user ID extracted from token's 'sub' field
+  const userId = authResult.payload.userId
 
   try {
     const body = await request.json()
@@ -188,8 +259,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Verify project ownership
-    if (project.user_id !== authResult.payload.userId) {
+      // Verify project ownership - ensure project belongs to the authenticated user (from token)
+      if (project.user_id !== userId) {
       return NextResponse.json(
         { success: false, message: "Forbidden: Project does not belong to you" },
         { status: 403 }
@@ -264,10 +335,10 @@ export async function POST(request: Request) {
         )
       }
 
-      // Validate that the member exists and belongs to the user
+      // Validate that the member exists and belongs to the authenticated user (from token)
       const member = await Member.findOne({
         _id: memberObjectId,
-        user_id: authResult.payload.userId,
+        user_id: userId,
       })
 
       if (!member) {
@@ -313,11 +384,12 @@ export async function POST(request: Request) {
       }
     }
 
+    // Create task with user_id from token to ensure task ownership
     const taskData: any = {
       title: title.trim(),
       description: description?.trim(),
       project_id: projectObjectId,
-      user_id: authResult.payload.userId,
+      user_id: userId, // User ID extracted from token's 'sub' field
       priority: priority || "Medium",
       status: status || "Pending",
     }
