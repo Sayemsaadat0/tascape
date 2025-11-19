@@ -63,13 +63,13 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "w-full px-3 rounded-full border border-gray-300 outline-none flex items-center justify-between gap-2 text-left ",
+          "w-full px-3 rounded-md border border-gray-300 outline-none flex items-center justify-between gap-2 text-left ",
           buttonMinHeight,
           buttonPadding,
           className
         )}
       >
-        <div className="flex-1 flex flex-wrap gap-1 min-h-[1.5rem] items-center">
+        <div className="flex-1 flex flex-wrap gap-1 min-h-6items-center">
           {selectedLabels.length > 0 ? (
             selectedLabels.map((label, idx) => {
               const option = options.find((opt) => opt.label === label);
@@ -81,7 +81,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
                   {label}
                   <span
                     onClick={(e) => removeOption(option?.value || "", e)}
-                    className="hover:bg-gray-200 rounded-full p-0.5 cursor-pointer"
+                    className="hover:bg-gray-200 rounded-md p-0.5 cursor-pointer"
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
