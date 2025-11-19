@@ -71,10 +71,10 @@ export const MobileSidebar: React.FC<MobileSidebarProps> = ({
 };
 
 //Default component props
-interface NavbarProps {
-  isCollapsed: boolean;
-  // onToggleCollapse: () => void
-}
+// interface NavbarProps {
+//   isCollapsed: boolean;
+//   // onToggleCollapse: () => void
+// }
 
 export const Navbar = () => {
   const router = useRouter();
@@ -126,13 +126,16 @@ export const Navbar = () => {
             align="end"
           >
             <DropdownMenuLabel className="px-2 py-1.5">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-semibold text-white leading-none">
-                  {user?.name || "User"}
-                </p>
-                <p className="text-xs text-white/60 leading-none">
-                  {user?.email || "user@example.com"}
-                </p>
+              <div className="flex items-center gap-2">
+                <UserIcon className="h-5 w-5 text-white" />
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-semibold text-white leading-none">
+                    {user?.name || "User"}
+                  </p>
+                  <p className="text-xs text-white/60 leading-none">
+                    {user?.email || "user@example.com"}
+                  </p>
+                </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-white/20 my-2" />

@@ -176,12 +176,15 @@ const TeamForm: React.FC<TeamFormProps> = ({
           />
 
           <div className="flex-1">
-            <Label
+           <div className="mb-2 flex justify-between">
+           <Label
               htmlFor="members"
               className="text-sm mx-3 mb-2 text-white/60"
             >
               Members
             </Label>
+            <MemberForm  />
+           </div>
             <div className="flex items-center gap-2">
               <div className="flex-1">
                 <MultiSelect
@@ -195,7 +198,7 @@ const TeamForm: React.FC<TeamFormProps> = ({
                 )}
               </div>
 
-              <MemberForm iconOnly />
+              
             </div>
           </div>
 

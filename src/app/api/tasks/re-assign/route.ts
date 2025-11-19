@@ -166,6 +166,10 @@ export async function POST(request: Request) {
       return { task, currentMemberId }
     })
 
+    const movablePriorities = new Set(["Low", "Medium"])
+    const isMovablePriority = (priority?: string | null) =>
+      Boolean(priority && movablePriorities.has(priority))
+
     // Helper function to find member with most free capacity
     const findBestTargetMember = () => {
       if (availableMembers.length === 0) return null
@@ -259,10 +263,14 @@ export async function POST(request: Request) {
     // Step 1: Handle overloaded members first
     for (const { task, currentMemberId } of tasksWithAssignees) {
       if (!currentMemberId) continue
+      if (!isMovablePriority(task.priority)) continue
 
-      const isOverloaded = 
-        currentUsedCapacity.get(currentMemberId)! >= 
-        memberDetails.get(currentMemberId)!.capacity
+      const memberDetail = memberDetails.get(currentMemberId)
+      if (!memberDetail) continue
+
+      const memberCapacity = memberDetail.capacity ?? 0
+      const memberUsed = currentUsedCapacity.get(currentMemberId) ?? 0
+      const isOverloaded = memberUsed > memberCapacity
 
       if (isOverloaded) {
         const targetMember = findBestTargetMember()
@@ -328,6 +336,7 @@ export async function POST(request: Request) {
                 : String(t.task._id)
             return (
               t.currentMemberId === fromMemberId &&
+              isMovablePriority(t.task.priority) &&
               !reassignments.some(
                 (r) =>
                   r.taskId === taskIdValue &&

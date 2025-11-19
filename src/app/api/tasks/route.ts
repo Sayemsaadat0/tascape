@@ -46,9 +46,12 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const projectIdParam = extractString(searchParams.get("project_id"))
+    const memberIdParam = extractString(searchParams.get("member_id"))
+    const searchParam = extractString(searchParams.get("search"))
 
     let projectObjectId: Types.ObjectId | null = null
     let projectInfo: any = null
+    let memberObjectId: Types.ObjectId | null = null
 
     // If project_id is provided, validate it
     if (projectIdParam) {
@@ -94,6 +97,28 @@ export async function GET(request: Request) {
       }
     }
 
+    if (memberIdParam) {
+      memberObjectId = resolveObjectId(memberIdParam)
+      if (!memberObjectId) {
+        return NextResponse.json(
+          { success: false, message: "Invalid member_id" },
+          { status: 400 }
+        )
+      }
+
+      const member = await Member.findOne({
+        _id: memberObjectId,
+        user_id: userId,
+      })
+
+      if (!member) {
+        return NextResponse.json(
+          { success: false, message: "Member not found or does not belong to you" },
+          { status: 404 }
+        )
+      }
+    }
+
     // Build query - ALWAYS filter by user_id from token to ensure user-based task filtering
     // This ensures users can only see tasks they created (user_id from token's 'sub' field)
     const query: any = {
@@ -102,6 +127,14 @@ export async function GET(request: Request) {
     
     if (projectObjectId) {
       query.project_id = projectObjectId
+    }
+
+    if (memberObjectId) {
+      query.member_id = memberObjectId
+    }
+
+    if (searchParam) {
+      query.title = { $regex: searchParam, $options: "i" }
     }
 
     // Fetch tasks, ensuring they belong to the authenticated user

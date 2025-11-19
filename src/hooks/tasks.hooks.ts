@@ -55,14 +55,47 @@ export interface TasksResponseType {
   results: TaskType[];
 }
 
-export const useGetTasks = (projectId: string | null) => {
+interface UseGetTasksParams {
+  projectId?: string | null;
+  memberId?: string | null;
+  search?: string;
+}
+
+interface ReassignDetail {
+  task: string;
+  from: string;
+  to: string;
+  from_assignee: string;
+  to_assignee: string;
+}
+
+interface ReassignResult {
+  total_tasks: number;
+  reassignments_count: number;
+  reassignments: ReassignDetail[];
+}
+
+interface ReassignResponse {
+  success: boolean;
+  message: string;
+  result?: ReassignResult;
+}
+
+export const useGetTasks = ({
+  projectId = null,
+  memberId = null,
+  search = "",
+}: UseGetTasksParams) => {
   const { token } = useAuthStore();
   return useQuery<TasksResponseType>({
-    queryKey: ["tasksList", projectId],
+    queryKey: ["tasksList", { projectId, memberId, search }],
     queryFn: () => {
-      const url = projectId 
-        ? `api/tasks?project_id=${projectId}`
-        : `api/tasks`;
+      const params = new URLSearchParams();
+      if (projectId) params.set("project_id", projectId);
+      if (memberId) params.set("member_id", memberId);
+      if (search) params.set("search", search);
+      const queryString = params.toString();
+      const url = queryString ? `api/tasks?${queryString}` : `api/tasks`;
       return axiousResuest({
         url,
         method: "get",
@@ -99,9 +132,9 @@ export const useCreateTask = () => {
           "Content-Type": "application/json",
         },
       }),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["tasksList", variables.project_id],
+        queryKey: ["tasksList"],
       });
     },
   });
@@ -131,20 +164,14 @@ export const useUpdateTask = (id: string) => {
           "Content-Type": "application/json",
         },
       }),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       // Invalidate tasks for the project_id if provided, otherwise invalidate all
-      if (variables.project_id) {
-        queryClient.invalidateQueries({
-          queryKey: ["tasksList", variables.project_id],
-        });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ["tasksList"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["tasksList"] });
     },
   });
 };
 
-export const useDeleteTask = (id: string, projectId?: string) => {
+export const useDeleteTask = (id: string) => {
   const queryClient = useQueryClient();
   const { token } = useAuthStore();
   return useMutation({
@@ -157,13 +184,31 @@ export const useDeleteTask = (id: string, projectId?: string) => {
         },
       }),
     onSuccess: () => {
-      if (projectId) {
-        queryClient.invalidateQueries({
-          queryKey: ["tasksList", projectId],
-        });
-      } else {
-        queryClient.invalidateQueries({ queryKey: ["tasksList"] });
-      }
+      queryClient.invalidateQueries({ queryKey: ["tasksList"] });
+    },
+  });
+};
+
+export const useReassign = () => {
+  const queryClient = useQueryClient();
+  const { token } = useAuthStore();
+  return useMutation<ReassignResponse, Error, { projectId: string }>({
+    mutationFn: async ({ projectId }) =>
+      (await axiousResuest({
+        url: `api/tasks/re-assign`,
+        method: "post",
+        data: {
+          project_id: projectId,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })) as ReassignResponse,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["tasksList"],
+      });
     },
   });
 };

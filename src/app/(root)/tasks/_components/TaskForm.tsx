@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useFormik } from "formik";
 import { toast } from "sonner";
 import * as yup from "yup";
@@ -30,7 +30,6 @@ import {
   useUpdateTask,
   type TaskType,
 } from "@/hooks/tasks.hooks";
-import { useGetMembersList } from "@/hooks/members.hooks";
 import { useGetProjectsList } from "@/hooks/projects.hooks";
 import {
   Select,
@@ -82,13 +81,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
   
   const createTask = useCreateTask();
   const updateTask = useUpdateTask(instance?._id || "temp");
-  const { data: membersData } = useGetMembersList();
   const { data: projectsData } = useGetProjectsList();
 
   const isEditMode = !!instance;
 
-  // Get projects list for project selector (when project is null)
-  const projectsList = projectsData?.results || [];
+  const projectsList = useMemo(() => projectsData?.results || [], [projectsData]);
+
+  const projectsForSelect = useMemo(() => {
+    const list = [...projectsList];
+    if (project && !list.some((proj) => proj._id === project._id)) {
+      list.unshift(project);
+    }
+    return list;
+  }, [projectsList, project]);
 
   const {
     handleChange,
@@ -179,9 +184,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
   });
 
   // Get team members from project's team_info or selected project
-  const selectedProjectForMembers = project || (values.project_id 
-    ? projectsList.find(p => p._id === values.project_id) 
-    : null);
+  const selectedProjectId = values.project_id || "";
+  const selectedProjectForMembers =
+    (selectedProjectId
+      ? projectsForSelect.find((p) => p._id === selectedProjectId) ||
+        (project && project._id === selectedProjectId ? project : null)
+      : null) || null;
   const teamMembers =
     selectedProjectForMembers?.team_info?.members?.map((member) => ({
       value: member._id,
@@ -224,6 +232,30 @@ const TaskForm: React.FC<TaskFormProps> = ({
     setCapacityWarningOpen(false);
     setPendingMemberId(null);
     setOverCapacityMember(null);
+  };
+
+  const handleAutoAssign = () => {
+    if (!selectedProjectId) {
+      toast.error("Select a property first");
+      return;
+    }
+
+    if (!teamMembers.length) {
+      toast.error("No team members available");
+      return;
+    }
+
+    const memberWithMostCapacity = teamMembers.reduce((best, current) => {
+      const bestFree = best.capacity - best.used_capacity;
+      const currentFree = current.capacity - current.used_capacity;
+      return currentFree > bestFree ? current : best;
+    });
+
+    handleMemberSelection(memberWithMostCapacity.value);
+
+    if (memberWithMostCapacity.capacity - memberWithMostCapacity.used_capacity > 0) {
+      toast.success(`${memberWithMostCapacity.label} assigned automatically`);
+    }
   };
 
   useEffect(() => {
@@ -292,41 +324,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
           }}
           className="space-y-3 mt-4"
         >
-          {/* Project Selector - Only show if project is not provided */}
-          {!project && (
-            <div>
-              <Label htmlFor="project_id" className="text-sm mx-3 mb-2 text-white/60">
-                Project *
-              </Label>
-              <div>
-                <Select
-                  value={values.project_id || undefined}
-                  onValueChange={(value) => {
-                    setFieldValue("project_id", value, false);
-                    // Reset assigned_member when project changes
-                    setFieldValue("assigned_member", "", false);
-                  }}
-                >
-                  <SelectTrigger className="w-full h-10 rounded-full border-gray-300">
-                    <SelectValue placeholder="Select a project..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-t-gray text-t-black">
-                    {projectsList.map((proj) => (
-                      <SelectItem key={proj._id} value={proj._id}>
-                        {proj.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.project_id && touched.project_id && (
-                  <p className="text-orange-400 px-2 pt-2 text-sm">
-                    {errors.project_id}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
           <div>
             <Label htmlFor="title" className="text-sm mx-3 text-white/60">
               Title *
@@ -346,32 +343,52 @@ const TaskForm: React.FC<TaskFormProps> = ({
           </div>
 
           <div>
-            <Label htmlFor="description" className="text-sm mx-3 text-white/60">
-              Description
+            <Label htmlFor="property_id" className="text-sm mx-3 mb-2 text-white/60">
+              Property *
             </Label>
-            <textarea
-              id="description"
-              name="description"
-              onChange={handleChange}
-              value={values.description}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none text-white  resize-none"
-              placeholder="Task description"
-            />
-            {errors.description && touched.description && (
-              <p className="text-orange-400 px-2 pt-2 text-sm">
-                {errors.description}
-              </p>
-            )}
+            <div>
+              <Select
+                value={values.project_id || ""}
+                onValueChange={(value) => {
+                  setFieldValue("project_id", value, false);
+                  setFieldValue("assigned_member", "", false);
+                }}
+              >
+                <SelectTrigger className="w-full h-10 rounded-full border-gray-300">
+                  <SelectValue placeholder="Select a property..." />
+                </SelectTrigger>
+                <SelectContent className="bg-t-gray text-t-black">
+                  {projectsForSelect.map((proj) => (
+                    <SelectItem key={proj._id} value={proj._id}>
+                      {proj.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.project_id && touched.project_id && (
+                <p className="text-orange-400 px-2 pt-2 text-sm">
+                  {errors.project_id}
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
-            <Label htmlFor="assigned_member" className="text-sm mx-3 mb-2 text-white/60">
-              Assigned Member
-            </Label>
-            <div >
+            <div className="flex items-center justify-between mx-3 mb-2">
+              <Label htmlFor="assigned_member" className="text-sm text-white/60">
+                Assigned Member
+              </Label>
+              <button
+                type="button"
+                onClick={handleAutoAssign}
+                className="text-xs text-white"
+              >
+                Auto assign
+              </button>
+            </div>
+            <div>
               <Select
-                value={values.assigned_member || undefined}
+                value={values.assigned_member || ""}
                 onValueChange={(value) => {
                   if (value) {
                     handleMemberSelection(value);
@@ -379,8 +396,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     setFieldValue("assigned_member", "", false);
                   }
                 }}
+                disabled={!selectedProjectId}
               >
-                <SelectTrigger className="w-full h-10 rounded-full border-gray-300">
+                <SelectTrigger
+                  className="w-full h-10 rounded-full border-gray-300"
+                  disabled={!selectedProjectId}
+                >
                   <SelectValue placeholder="Select a member (optional)..." />
                 </SelectTrigger>
                 <SelectContent className="bg-t-gray text-t-black">
@@ -396,10 +417,16 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   ))}
                 </SelectContent>
               </Select>
+              {!selectedProjectId && (
+                <p className="text-white/60 px-2 pt-2 text-xs">
+                  Select a property first to choose members.
+                </p>
+              )}
             </div>
           </div>
-
-          <div>
+<div className="flex gap-2 justify-between items-center">
+  
+          <div className="w-full">
             <Label htmlFor="priority" className="text-sm mx-3 mb-2 text-white/60">
               Priority *
             </Label>
@@ -427,7 +454,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </div>
           </div>
 
-          <div>
+          <div className="w-full">
             <Label htmlFor="status" className="text-sm mx-3 mb-2 text-white/60">
               Status *
             </Label>
@@ -453,6 +480,27 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 </p>
               )}
             </div>
+          </div>
+</div>
+
+          <div>
+            <Label htmlFor="description" className="text-sm mx-3 text-white/60">
+              Description
+            </Label>
+            <textarea
+              id="description"
+              name="description"
+              onChange={handleChange}
+              value={values.description}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none text-white resize-none"
+              placeholder="Task description"
+            />
+            {errors.description && touched.description && (
+              <p className="text-orange-400 px-2 pt-2 text-sm">
+                {errors.description}
+              </p>
+            )}
           </div>
 
           <div className="mt-5">
