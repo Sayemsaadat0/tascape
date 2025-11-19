@@ -162,7 +162,7 @@ const TaskManagementContainer: React.FC<TaskManagementContainerProps> = ({
   const doneTasks = tasks.filter((task) => task.status === "Done");
 
   return (
-    <div className=" ">
+    <div className=" h-[calc(100vh-100px)] sm:h-[calc(100vh-120px)] md:h-[calc(100vh-150px)] lg:h-[calc(100vh-180px)] xl:h-[calc(100vh-200px)] 2xl:h-[calc(100vh-220px)]">
       <div className="flex justify-between bg-white items-center border-b border-gray-200 py-2 px-4">
         <div>
           <h1 className="text-xl font-medium text-black">
@@ -275,7 +275,7 @@ const TaskManagementContainer: React.FC<TaskManagementContainerProps> = ({
             ].map((col) => (
               <div
                 key={col.status}
-                className="flex flex-col h-[calc(100vh-300px)] bg-gray-200 rounded-lg p-3"
+                className="flex flex-col  bg-gray-200 rounded-lg p-3"
               >
                 <div className="h-4 w-20 bg-gray-300 rounded animate-pulse mb-3"></div>
                 <div className="space-y-2">

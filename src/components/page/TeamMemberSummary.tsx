@@ -61,8 +61,12 @@ const TeamMemberSummary: React.FC = () => {
 
   if (!members.length) {
     return (
-      <div className="max-w-4xl rounded-2xl border border-gray-200 bg-white p-4 text-gray-500">
-        No team members found yet.
+      <div className="max-w-4xl rounded-[32px] border border-dashed border-gray-300 bg-white/80 p-8 text-center shadow-sm">
+      
+        <h2 className="text-xl font-semibold text-t-black">No team members yet</h2>
+        <p className="mt-2 text-sm text-gray-500">
+          Add team members to track their capacity and workload here.
+        </p>
       </div>
     );
   }
