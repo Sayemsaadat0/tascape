@@ -18,7 +18,7 @@ export const TaskColumn: React.FC<TaskColumnProps> = ({
   project,
 }) => {
   return (
-    <div className="flex flex-col h-[calc(100vh-150px)] rounded-lg">
+    <div className="flex flex-col rounded-lg h-[60vh] sm:h-[70vh] md:h-[calc(100vh-150px)] lg:h-[calc(100vh-180px)] xl:h-[calc(100vh-200px)] 2xl:h-[calc(100vh-220px)]">
       <div className="flex justify-between items-center p-2 bg-white rounded-lg border border-gray-200 mb-2">
         <h2 className="font-semibold text-gray-900 text-sm">{title}</h2>
         <span className="bg-white text-gray-700 text-xs font-medium px-2.5 py-1 rounded-full shadow-sm">

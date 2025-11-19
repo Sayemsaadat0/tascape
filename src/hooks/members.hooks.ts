@@ -27,6 +27,28 @@ export interface MembersResponseType {
   results: MemberType[];
 }
 
+export interface MemberSummaryTask {
+  task_id: string;
+  task_name: string;
+  project_name: string;
+  priority: string;
+}
+
+export interface MemberSummary {
+  member_id: string;
+  name: string;
+  role: string;
+  capacity: number | null;
+  used_capacity: number | null;
+  tasks: MemberSummaryTask[];
+}
+
+export interface MemberSummaryResponse {
+  success: boolean;
+  message: string;
+  results: MemberSummary[];
+}
+
 export const useGetMembersList = () => {
   const { token } = useAuthStore();
   return useQuery<MembersResponseType>({
@@ -34,6 +56,21 @@ export const useGetMembersList = () => {
     queryFn: () =>
       axiousResuest({
         url: `api/members/`,
+        method: "get",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }),
+  });
+};
+
+export const useGetMemberSummary = () => {
+  const { token } = useAuthStore();
+  return useQuery<MemberSummaryResponse>({
+    queryKey: ["memberSummary"],
+    queryFn: () =>
+      axiousResuest({
+        url: `api/members/summery`,
         method: "get",
         headers: {
           Authorization: `Bearer ${token}`,

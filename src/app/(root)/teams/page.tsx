@@ -81,6 +81,18 @@ const TeamsPage = () => {
     );
   }
 
+  if (!teams?.results?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 p-5 space-y-3 text-center">
+        <h2 className="text-xl font-semibold text-t-black">No team members found</h2>
+        <p className="text-sm text-gray-500 max-w-sm">
+          Create your first team to start organizing members and assigning tasks.
+        </p>
+        <TeamForm />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 p-5">
       <div className="flex justify-between items-center">
@@ -152,7 +164,7 @@ const TeamsPage = () => {
 
       {!isLoading && teams?.results?.length === 0 && (
         <div className="flex justify-center items-center h-64">
-          <p className="text-white/60">No teams found</p>
+          <p className="text-t-black">No teams found</p>
         </div>
       )}
     </div>

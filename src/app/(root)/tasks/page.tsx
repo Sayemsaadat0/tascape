@@ -11,7 +11,7 @@ export default function Tasks() {
   );
   console.log(selectedProject);
   return (
-    <div className="flex relative ">
+    <div className="flex relative pb-24 ">
       <div className="fixed w-44  p-2 min-h-screen bg-t-black text-white">
         <ProjectsFilter
           projects={projects?.results || []}
